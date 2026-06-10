@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameShelf 🎲 — WS Game Company Vintage Bookshelf Collection</title>
+<meta name="description" content="Track, rate and explore your WS Game Company Vintage Bookshelf game collection.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Outfit', system-ui, sans-serif; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React + Babel from CDN (no build step needed) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+
+/* ─── THEME ──────────────────────────────────────────────────────── */
+const THEMES = {
+  dark: {
+    bg:"#0f0c29", bg2:"#1a1a2e", bg3:"#16213e", card:"#1e293b",
+    cardBorder:"rgba(255,255,255,0.07)", surface:"rgba(255,255,255,0.06)",
+    text:"#f1f5f9", textMuted:"#94a3b8", textFaint:"#475569",
+    accent:"#6366f1", accentText:"#a5b4fc",
+    shelfBoard:"linear-gradient(180deg,#c8a870,#a07840)",
+    shelfShadow:"0 6px 0 #7a5820,0 8px 20px rgba(0,0,0,0.4)",
+    inputBg:"rgba(255,255,255,0.07)", inputBorder:"rgba(255,255,255,0.12)",
+    navBg:"rgba(15,12,41,0.95)",
+  },
+  light: {
+    bg:"#faf9f6", bg2:"#f0ece3", bg3:"#e8e2d8", card:"#ffffff",
+    cardBorder:"#e2e8f0", surface:"rgba(0,0,0,0.04)",
+    text:"#1a1a2e", textMuted:"#64748b", textFaint:"#94a3b8",
+    accent:"#6366f1", accentText:"#4f46e5",
+    shelfBoard:"linear-gradient(180deg,#c8a870,#a07840)",
+    shelfShadow:"0 6px 0 #7a5820,0 8px 20px rgba(0,0,0,0.25)",
+    inputBg:"#ffffff", inputBorder:"#d1d5db",
+    navBg:"rgba(250,249,246,0.95)",
+  }
+};
+
+/* ─── SPINE COLOURS ──────────────────────────────────────────────── */
+const SPINE = {
+  "Battleship":             {bg:"#c0392b",text:"#fff"},
+  "Scattergories":          {bg:"#e8736b",text:"#fff"},
+  "Candy Land":             {bg:"#f48fb1",text:"#5a1a3a"},
+  "Jenga":                  {bg:"#e8750a",text:"#fff"},
+  "Boggle":                 {bg:"#c8a832",text:"#3a2a00"},
+  "Yahtzee":                {bg:"#e8dda0",text:"#4a3a10"},
+  "Scrabble":               {bg:"#f2edcc",text:"#4a3a10"},
+  "Clue":                   {bg:"#9e9e9e",text:"#fff"},
+  "Monopoly":               {bg:"#757575",text:"#fff"},
+  "Chess":                  {bg:"#616161",text:"#fff"},
+  "Checkers & Backgammon":  {bg:"#424242",text:"#fff"},
+  "Trouble":                {bg:"#7cb342",text:"#fff"},
+  "Sorry!":                 {bg:"#388e3c",text:"#fff"},
+  "The Game of Life":       {bg:"#90caf9",text:"#0a3a6a"},
+  "Connect Four":           {bg:"#bbdefb",text:"#0a2a5a"},
+  "Chutes & Ladders":       {bg:"#ce93d8",text:"#3a0a5a"},
+  "Trivial Pursuit":        {bg:"#4a148c",text:"#fff"},
+  "Mystery Date":           {bg:"#f48fb1",text:"#5a1a3a"},
+  "Catch Phrase":           {bg:"#00acc1",text:"#fff"},
+  "Risk":                   {bg:"#2e7d32",text:"#fff"},
+  "Taboo":                  {bg:"#6a1b9a",text:"#fff"},
+  "Guess Who?":             {bg:"#d4a017",text:"#3a2800"},
+};
+
+const CAT_COLOR = {
+  Strategy:"#2563eb", Word:"#16a34a", Party:"#c0392b", Children:"#ca8a04",
+  Dexterity:"#b45309", Mystery:"#7c3aed", Deduction:"#0891b2", Trivia:"#854d0e",
+  Family:"#0369a1", Classic:"#92400e", Dice:"#ea580c",
+};
+const CAT_EMOJI = {
+  Strategy:"⚔️", Word:"🔤", Party:"🎉", Children:"🧸", Dexterity:"🤚",
+  Mystery:"🔍", Deduction:"🧩", Trivia:"🧠", Family:"👨‍👩‍👧", Classic:"🏛️", Dice:"🎲",
+};
+
+const DIFFICULTY = {
+  "Battleship":1, "Scattergories":2, "Candy Land":1, "Jenga":2, "Boggle":2,
+  "Yahtzee":2, "Scrabble":3, "Clue":3, "Monopoly":3, "Chess":5,
+  "Checkers & Backgammon":3, "Trouble":1, "Sorry!":1, "The Game of Life":2,
+  "Connect Four":2, "Chutes & Ladders":1, "Trivial Pursuit":3, "Guess Who?":2,
+  "Mystery Date":2, "Catch Phrase":2, "Risk":4, "Taboo":3,
+};
+const DIFF_LABEL = ["","Beginner","Easy","Moderate","Challenging","Expert"];
+const DIFF_COLOR = ["","#22c55e","#84cc16","#f59e0b","#f97316","#ef4444"];
+
+/* ─── GAME DATA ──────────────────────────────────────────────────── */
+const INIT_GAMES = [
+  {id:1,  title:"Battleship",            emoji:"🚢", players:"2",    ages:"7+",  playTime:"30–45 min", bggRating:5.7, category:"Strategy",  howToPlay:"Secretly arrange your fleet of 5 ships on a 10×10 grid. Take turns calling coordinates — Hit or Miss. Sink all 5 opponent ships to win.", tip:"Hunt in a checkerboard pattern after your first miss — maximum coverage, minimum waste.", tags:["Deduction","Naval","Two-Player"],   ownedDefault:true,  price:52},
+  {id:2,  title:"Scattergories",         emoji:"💡", players:"2–6",  ages:"12+", playTime:"30–45 min", bggRating:7.0, category:"Party",     howToPlay:"Roll the letter die, flip the timer, fill 12 category slots with answers starting with that letter. Duplicate answers cancel. Unique answers score.", tip:"Alliterative answers score double — 'Slimy Snakes' for S counts as 2 points.", tags:["Word","Speed","Party"],             ownedDefault:true,  price:47},
+  {id:3,  title:"Candy Land",            emoji:"🍭", players:"2–4",  ages:"3+",  playTime:"15–30 min", bggRating:3.7, category:"Children",  howToPlay:"Draw color cards and advance your gingerbread person toward Candy Castle. Special picture cards jump you to landmark squares. Pure luck — no reading required!", tip:"Every kid can beat every adult. That's the whole point. Let them win.", tags:["Children","Luck","Rainbow"],          ownedDefault:true,  price:47},
+  {id:4,  title:"Jenga",                 emoji:"🪵", players:"1+",   ages:"8+",  playTime:"10–20 min", bggRating:6.5, category:"Dexterity", howToPlay:"Remove one wooden block from anywhere in the tower using only one hand, then balance it on top. The player who causes the collapse loses.", tip:"Remove from the center — corners are load-bearing. And take your time: build the drama.", tags:["Dexterity","Tension","Physical"],    ownedDefault:true,  price:52},
+  {id:5,  title:"Boggle",                emoji:"🔡", players:"1–8",  ages:"8+",  playTime:"10–15 min", bggRating:6.5, category:"Word",      howToPlay:"Shake the letter grid, flip 3-minute timer, find as many connecting-letter words as possible. Adjacent letters only (including diagonals). Shared words cancel.", tip:"Hunt for -ING, -ED, -ER, -S endings systematically — they multiply word count instantly.", tags:["Word","Speed","Party"],             ownedDefault:true,  price:47},
+  {id:6,  title:"Yahtzee",               emoji:"🎲", players:"1–8",  ages:"8+",  playTime:"30–45 min", bggRating:6.1, category:"Dice",      howToPlay:"Roll 5 dice up to 3 times per turn. Fill 13 scoring boxes: pairs, straights, full house, and the legendary Yahtzee (five-of-a-kind). Highest total wins.", tip:"Score 63+ in the upper section (average 3 per number) for the 35-point bonus — don't neglect it.", tags:["Dice","Luck","Classic"],            ownedDefault:true,  price:47},
+  {id:7,  title:"Scrabble",              emoji:"🔤", players:"2–4",  ages:"8+",  playTime:"60–90 min", bggRating:7.1, category:"Word",      howToPlay:"Draw 7 tiles and build words on the crossword board, connecting off existing words. Double/triple letter and word squares multiply scores. Highest total wins.", tip:"Two-letter words are your secret weapon: QI, ZA, XI, JO, OX are all legal and score big on premium squares.", tags:["Word","Vocabulary","Classic"],       ownedDefault:true,  price:47},
+  {id:8,  title:"Clue",                  emoji:"🔍", players:"3–6",  ages:"8+",  playTime:"45–75 min", bggRating:6.2, category:"Mystery",   howToPlay:"A murder in the mansion! Move between rooms, make suggestions, and use deduction as other players secretly disprove your theories. First to correctly accuse wins.", tip:"Track every suggestion from every player — their reactions reveal as much as your own questions.", tags:["Deduction","Mystery","Whodunit"],    ownedDefault:true,  price:47},
+  {id:9,  title:"Monopoly",              emoji:"🏦", players:"2–6",  ages:"8+",  playTime:"60–180 min",bggRating:6.0, category:"Strategy",  howToPlay:"Buy properties, collect rent, build houses and hotels. Trade strategically. Bankrupt your opponents. Last player solvent wins.", tip:"Orange and red property groups are the most-landed-on after Jail — the best ROI on the board.", tags:["Property","Trading","Classic"],      ownedDefault:true,  price:47},
+  {id:10, title:"Chess",                 emoji:"♟️", players:"2",    ages:"9+",  playTime:"30–90 min", bggRating:8.0, category:"Strategy",  howToPlay:"Command 16 pieces — Pawns, Knights, Bishops, Rooks, Queen, King — each with unique movement. Trap your opponent's King in checkmate to win.", tip:"Control the center (e4/d4), develop knights before bishops, and castle your King early.", tags:["Abstract","Strategy","Timeless"],    ownedDefault:true,  price:47},
+  {id:11, title:"Checkers & Backgammon", emoji:"🔴", players:"2",    ages:"6+",  playTime:"20–45 min", bggRating:6.6, category:"Classic",   howToPlay:"TWO GAMES: Checkers — capture by jumping diagonally, king your pieces at the far end. Backgammon — roll dice to race 15 pieces around 24 points and bear them off first.", tip:"In Backgammon, the doubling cube is as much psychology as strategy — offer it boldly.", tags:["Strategy","Dice","Two-in-One"],      ownedDefault:true,  price:47},
+  {id:12, title:"Trouble",               emoji:"⚡", players:"2–4",  ages:"5+",  playTime:"30–45 min", bggRating:5.1, category:"Family",    howToPlay:"Pop the iconic dome-shaped Pop-O-Matic bubble to roll. Move 4 pawns to your Finish zone. Landing on an opponent sends them back to Home. Roll a 6 to enter the board.", tip:"The Pop-O-Matic bubble makes the most satisfying sound in board gaming. You'll pop it for fun between turns.", tags:["Family","Pop-O-Matic","Luck"],       ownedDefault:true,  price:47},
+  {id:13, title:"Sorry!",                emoji:"😬", players:"2–4",  ages:"6+",  playTime:"30–45 min", bggRating:5.4, category:"Family",    howToPlay:"Draw cards and move 4 pawns from Start to Home. SORRY! cards let you steal an opponent's spot and bump them to Start. Slide zones offer shortcuts. First to get all 4 home wins.", tip:"Aggression is the fastest strategy — never hesitate to send opponents backward.", tags:["Family","Strategy","Classic"],       ownedDefault:true,  price:47},
+  {id:14, title:"The Game of Life",      emoji:"🎡", players:"2–6",  ages:"8+",  playTime:"60–90 min", bggRating:5.3, category:"Family",    howToPlay:"Spin and drive your car through milestones: college, career, marriage, kids, retirement. Collect salary cards, pay bills, navigate surprises. Most wealth at retirement wins.", tip:"The college path pays off — higher salary cards more than offset the student loans.", tags:["Family","Journey","Classic"],        ownedDefault:true,  price:52},
+  {id:15, title:"Connect Four",          emoji:"🟡", players:"2",    ages:"6+",  playTime:"10–20 min", bggRating:6.4, category:"Strategy",  howToPlay:"Drop colored discs into a 7-column grid. Gravity stacks them up. First to connect four discs in a row — horizontal, vertical, or diagonal — wins.", tip:"The center column is the most powerful position. Whoever dominates column 4 usually wins.", tags:["Abstract","Two-Player","Quick"],     ownedDefault:true,  price:47},
+  {id:16, title:"Chutes & Ladders",      emoji:"🪜", players:"2–4",  ages:"3+",  playTime:"20–45 min", bggRating:3.5, category:"Children",  howToPlay:"Spin and move up the numbered 100-square grid. Climb ladders for lucky shortcuts. Slide down chutes when you land on them. First to reach square 100 wins.", tip:"Square 56 connects to the biggest ladder (to 84) — it's the luckiest single square on the board.", tags:["Children","Luck","Numbers"],         ownedDefault:true,  price:47},
+  {id:17, title:"Trivial Pursuit",       emoji:"🧠", players:"2–6",  ages:"8+",  playTime:"60–90 min", bggRating:6.6, category:"Trivia",    howToPlay:"Answer trivia across 6 color-coded categories: Geography, Entertainment, History, Art & Literature, Science, Sports. Collect one wedge per category at hub spaces. Fill all 6 and win the final question.", tip:"Position yourself for wedge spaces early — random wandering wastes precious turns.", tags:["Trivia","Knowledge","Party"],        ownedDefault:true,  price:47},
+  {id:18, title:"Guess Who?",            emoji:"🎭", players:"2",    ages:"6+",  playTime:"15–20 min", bggRating:5.2, category:"Deduction", howToPlay:"Pick a mystery character card. Ask yes/no questions about physical features to eliminate faces on your flip board. First to correctly name your opponent's mystery character wins.", tip:"Start with the biggest eliminators: glasses, hats, facial hair. Knock out 8–10 faces per question.", tags:["Deduction","Two-Player","Characters"],ownedDefault:true,  price:47},
+  {id:19, title:"Mystery Date",          emoji:"💌", players:"2–4",  ages:"8+",  playTime:"30–45 min", bggRating:5.8, category:"Family",    howToPlay:"Collect matching colored outfit cards, then open the Mystery Door to reveal your date — dreamboat or dud? Trade cards to ensure your outfit matches your date's plans.", tip:"Originally 1965, reimagined with gorgeous vintage art. A genuine nostalgia hit for all ages.", tags:["Vintage","Nostalgic","Cards"],       ownedDefault:false, price:47},
+  {id:20, title:"Catch Phrase",          emoji:"🎤", players:"4+",   ages:"12+", playTime:"20–30 min", bggRating:7.2, category:"Party",     howToPlay:"Teams give clues to get teammates to say the word on the electronic disc — without using the word. Pass before the buzzer or the other team scores.", tip:"Hot-potato pressure is the real mechanic — clues spiral into hilarious nonsense as the buzzer ticks.", tags:["Party","Teams","Speed"],             ownedDefault:false, price:47},
+  {id:21, title:"Risk",                  emoji:"🌍", players:"2–6",  ages:"10+", playTime:"120–240 min",bggRating:7.0, category:"Strategy",  howToPlay:"Build armies, conquer territories, hold continents for bonus reinforcements. Roll dice to attack and defend. Trade card sets for armies. Eliminate opponents or complete your secret mission.", tip:"Australia is the best starting continent — single entry point at Siam, easy to hold and defend for steady bonuses.", tags:["War","Strategy","Epic"],             ownedDefault:false, price:52},
+  {id:22, title:"Taboo",                 emoji:"🚫", players:"4+",   ages:"13+", playTime:"30–60 min", bggRating:7.1, category:"Party",     howToPlay:"Get your team to say the keyword without using the 5 taboo clue words listed on the card. An opponent monitors with the buzzer. Most correct guesses wins.", tip:"Think completely sideways — use rhymes, movie quotes, personal stories. Anything except the forbidden words.", tags:["Party","Teams","Words"],             ownedDefault:false, price:47},
+];
+
+/* ─── FULL RULES ─────────────────────────────────────────────────── */
+const FULL_RULES = {
+  "Battleship":{objective:"Sink all 5 of your opponent's ships before they sink yours.",setup:["Each player gets a two-grid board — one for your fleet, one for tracking shots.","Secretly place your 5 ships: Carrier (5), Battleship (4), Destroyer (3), Submarine (3), Patrol Boat (2).","Ships placed horizontally or vertically only — no overlap.","Once placed, ships cannot be moved."],gameplay:["Players alternate turns. Call a grid coordinate (e.g. B-7).","Opponent responds: Hit! or Miss!","Mark hits red, misses white on your tracking grid.","When all squares of a ship are hit, opponent announces the ship name.","Keep firing until all 5 ships are sunk."],winning:"First player to sink all 5 opponent ships wins!",variants:["Salvo: Multiple shots per turn equal to remaining ships.","Super Battleship: Adds aircraft and aerial strikes."],tips:["After a hit, fire in a cross pattern to find the ship's orientation.","Ships are often placed along edges — don't neglect the borders."]},
+  "Scattergories":{objective:"Score the most points by naming unique answers to categories starting with the rolled letter.",setup:["Each player gets a folder with answer sheet and category list.","Roll the 20-sided letter die.","Set the 3-minute timer."],gameplay:["Simultaneously write one answer per category starting with that letter.","Alliterative answers (both words start with the letter) score 2 points.","When time is up, read answers aloud.","Duplicate answers are crossed out — zero points.","Only unique answers score."],winning:"Highest total after agreed rounds wins.",scoring:"1 point per unique answer · 2 points for alliterative answers",tips:["Think obscure — common answers will likely be duplicated.","For Q, X, Z: brand names and proper nouns are often allowed by house rules."]},
+  "Candy Land":{objective:"Be first to reach King Kandy's Candy Castle.",setup:["Place board in reach of all players.","Each player takes a gingerbread pawn and places on START.","Shuffle cards and place face-down."],gameplay:["Draw the top card on your turn.","Single-color card: Move to the nearest space of that color.","Double-color card: Move to the second nearest space.","Character cards: Move directly to that character's space — can be backward!","Licorice space: Lose your next turn."],winning:"First to reach or pass the Candy Castle wins — no exact count needed!",tips:["Purely luck-based — no decisions required, perfect for ages 3+.","Invented in the 1940s by Eleanor Abbott while recovering from polio."]},
+  "Jenga":{objective:"Remove blocks without toppling the tower. The player who causes the collapse loses.",setup:["Stack all 54 blocks in sets of 3 perpendicular layers.","Use the loading tray for a neat 18-layer starting tower."],gameplay:["Use ONE hand only to remove a block from below the top completed layer.","You may touch blocks to find a loose one, but must use it once moved halfway.","Place the removed block on the topmost layer.","Turn ends 10 seconds after placement."],winning:"The player who causes the collapse LOSES. Previous player wins.",tips:["Center blocks are almost always the safest to remove.","Never remove from the top three layers — it's against the rules.","Test blocks with a gentle tap to find loose ones."]},
+  "Boggle":{objective:"Find more valid words than opponents in the 4×4 grid within 3 minutes.",setup:["Shake the dome to randomize 16 letter cubes.","Each player takes paper and pencil.","Flip the 3-minute timer to start."],gameplay:["Find words by connecting adjacent letters (including diagonals).","Each cube used only once per word.","Minimum 3 letters.","Shared words cancel out — only unique words score."],winning:"Highest score after agreed rounds wins.",scoring:"3–4 letters=1pt · 5 letters=2pts · 6 letters=3pts · 7 letters=5pts · 8+=11pts",tips:["Add -S, -ED, -ING to verbs for easy extra points.","QU counts as one cube — look for QUEEN, QUEST, QUIP."]},
+  "Yahtzee":{objective:"Score the most points by rolling five dice combinations over 13 rounds.",setup:["Each player takes a scorecard.","Roll one die each to determine order — highest goes first."],gameplay:["Roll all 5 dice. Up to 3 rolls per turn.","Set aside keepers between rolls.","After 3rd roll, MUST score in one empty box.","Upper Section: Sum of matching number.","Lower Section: Three/Four of a Kind, Full House (25), Small Straight (30), Large Straight (40), Yahtzee (50), Chance.","Score 63+ in upper section for 35-point bonus."],winning:"After all 13 boxes filled, highest total wins.",scoring:"Yahtzee=50pts · Large Straight=40pts · Small Straight=30pts · Full House=25pts · Bonus Yahtzees=100pts each",tips:["Prioritize upper section bonus early.","Use Chance as a safety valve for decent but non-combo rolls.","Second Yahtzee scores 100 bonus points plus joker rule."]},
+  "Scrabble":{objective:"Score the most points forming words on the crossword-style board.",setup:["Place all 100 tiles face-down in the bag and mix.","Each player draws 7 tiles. Keep hidden on your rack.","Closest letter to A goes first. First word must cross the center star."],gameplay:["Place tiles, exchange tiles, or pass on your turn.","Words must connect to existing words like a crossword.","Horizontal or vertical only — never diagonal.","Draw replacement tiles after playing to maintain 7.","Premium squares multiply scores. Blank tiles worth 0 but represent any letter.","Using all 7 tiles earns a 50-point BINGO bonus."],winning:"Highest score when bag is empty and one player uses all tiles.",scoring:"Each letter has a value (A=1, Q=10, Z=10). Multiply by premium squares. Bingo=+50pts.",tips:["Learn 2-letter words: QI, ZA, XI, JO, KA, OX — they're all valid!","Save S tiles for high-value parallel plays."]},
+  "Clue":{objective:"Determine who killed Mr. Boddy, with what weapon, and in which room.",setup:["Separate cards into three decks: Suspects (6), Weapons (6), Rooms (9).","Place one random card from each deck in the confidential envelope.","Deal remaining 18 cards equally to players.","Players review their cards privately — these are NOT the answer."],gameplay:["Roll dice and move through mansion rooms.","In a room, make a SUGGESTION: name a suspect, weapon, and the room you're in.","Player to your left secretly shows ONE card from their hand that matches.","Note what's disproved on your detective sheet.","When confident, make an ACCUSATION: state all three elements."],winning:"First correct accusation wins. Incorrect accusation eliminates that player.",tips:["Your own cards cannot be the answer — use them to eliminate immediately.","Watch who CAN'T disprove suggestions — as valuable as who can."]},
+  "Monopoly":{objective:"Become the wealthiest player by bankrupting all opponents.",setup:["Each player starts with $1,500 in various bills.","All tokens placed on GO.","Shuffle Community Chest and Chance cards separately."],gameplay:["Roll both dice and advance clockwise.","Unowned property: Buy at printed price or go to auction.","Owned property: Pay rent — increases with houses and hotels.","GO: Collect $200 every time you pass or land.","Jail: Pay $50, use Get Out of Jail Free card, or roll doubles.","Build houses/hotels once you own ALL properties of a color group."],winning:"Last player solvent after all others go bankrupt wins.",tips:["Most landed-on: Illinois Ave, GO, B&O Railroad, Tennessee Ave.","Never leave cash idle — buy every property early.","Orange and red groups are the sweet spot for development."]},
+  "Chess":{objective:"Checkmate your opponent's King — put it under attack with no legal escape.",setup:["Light square in bottom-right corner for each player.","Back row left to right: Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook.","Queen on her own color. Pawns fill second row. White moves first."],gameplay:["PAWN: Forward 1 (or 2 on first move), captures diagonally.","ROOK: Any squares horizontally or vertically.","KNIGHT: L-shape — only piece that jumps over others.","BISHOP: Any squares diagonally — always same color.","QUEEN: Any squares any direction.","KING: One square any direction. Cannot move into check.","CASTLING: King 2 squares toward unmoved Rook — if neither has moved and no pieces between.","PAWN PROMOTION: Pawn reaching back rank becomes any piece."],winning:"Checkmate the opponent's King. Draws by stalemate, repetition, or agreement.",scoring:"Pawn=1 · Knight=3 · Bishop=3 · Rook=5 · Queen=9",tips:["Opening: Control center, develop knights before bishops, castle early.","Learn forks, pins, and skewers — three tactics that win material."]},
+  "Checkers & Backgammon":{objective:"CHECKERS: Capture all opponent pieces. BACKGAMMON: Bear all checkers off first.",setup:["CHECKERS: 12 pieces each on dark squares of closest 3 rows.","BACKGAMMON: Standard setup — 2 on opponent's 24-pt, 5 on 13-pt, 3 on 8-pt, 5 on 6-pt."],gameplay:["CHECKERS: Move diagonally forward. Capture by jumping over opponent piece.","CHECKERS: Multi-jump required if available. Kings move any direction.","BACKGAMMON: Roll two dice. Each die is a separate move toward your home board.","BACKGAMMON: Landing on a blot (lone checker) sends it to the bar.","BACKGAMMON: Once all checkers in home board, bear them off with exact or higher rolls."],winning:"CHECKERS: Capture all 12 opponent pieces. BACKGAMMON: First to bear off all 15.",tips:["CHECKERS: Sacrifice pieces to force multi-jumps capturing more.","BACKGAMMON: Priming (6 consecutive blocked points) traps opponent."]},
+  "Trouble":{objective:"Be first to move all 4 pegs from Home Base around the board into Finish.",setup:["Each player places 4 pegs in their Home Base.","Youngest player goes first."],gameplay:["Press the Pop-O-Matic dome to roll.","Roll a 6 to move a peg from Home onto the board (also earns extra turn).","Move any board peg forward the number shown.","Landing on an opponent sends their peg back to Home.","Exact roll needed to land in Finish."],winning:"First player with all 4 pegs in Finish wins!",tips:["Prioritize the peg furthest ahead.","Keep pegs bunched — harder for opponents to clear."]},
+  "Sorry!":{objective:"Be first to move all 4 pawns from Start to Home.",setup:["Each player places 4 pawns on their Start space.","Shuffle the Sorry card deck."],gameplay:["Draw the top card and follow instructions.","Card 1 or 2: Move from Start or advance forward.","Card 7: Move one pawn 7, or split between two pawns.","SORRY! Card: Take from Start, swap with any opponent.","SLIDES: Land on triangle start of a slide to slide to end — bumping others.","SAFETY ZONE: Last 5 spaces before Home, opponents can't enter."],winning:"First with all 4 pawns in Home wins!",tips:["SORRY! card is the most powerful in the deck — use aggressively.","Card 4 (move back 4) brilliantly accesses Home from just past it."]},
+  "The Game of Life":{objective:"Retire with the most wealth.",setup:["Each player chooses a car token and places on START.","Shuffle Career, Salary, House Deed cards into separate piles.","Each player receives starting money."],gameplay:["COLLEGE or CAREER: First choice! College costs but gives better careers.","Spin wheel (1–10) and move along the track.","PAY DAY spaces: Collect your salary.","LIFE Tiles: Keep face-down until retirement.","FAMILY: Wedding and Baby spaces add pegs to your car.","RETIREMENT: Choose Millionaire Estates (risky) or Countryside Acres (safe)."],winning:"Most total money (cash + Life Tile values) at retirement wins.",tips:["College path almost always pays off over a full game.","Collect as many Life Tiles as possible — some worth $250,000."]},
+  "Connect Four":{objective:"First to connect four discs in a row — horizontal, vertical, or diagonal.",setup:["Stand the grid frame upright.","Each player takes 21 discs of their color.","Alternate who goes first each game."],gameplay:["Take turns dropping one disc into any column.","Discs fall to the lowest available row.","Full columns (6 discs) are closed.","Watch for both your wins AND block opponent's.","Draw if board fills with no winner."],winning:"First to connect exactly 4 in a row wins — game ends immediately.",tips:["Center column (4) is statistically the best starting move.","Diagonal wins are hardest to spot — train your eye on them.","A 'seven trap' — two simultaneous win threats — is the key tactic."]},
+  "Chutes & Ladders":{objective:"Be first to reach square 100 exactly.",setup:["Each player places a pawn just off square 1.","Place spinner in center."],gameplay:["Spin and move forward that many squares.","LADDERS: Land on base of ladder, climb to the top.","CHUTES: Land on top of chute, slide to the bottom.","Must land EXACTLY on 100 to win."],winning:"First to land exactly on 100 wins!",tips:["Square 28→84 is the biggest ladder — near-win from a single lucky roll.","Square 99→78 is the cruelest chute — just one away from victory!"]},
+  "Trivial Pursuit":{objective:"Collect all 6 wedges then answer a final question at the hub to win.",setup:["Each player takes a 'pie' token with 6 empty wedge slots.","Place Question Cards in holder.","Highest roll goes first."],gameplay:["Roll and move in any direction.","Space color determines category of question asked.","Answer correctly: Roll again.","Answer incorrectly: Turn ends.","HUB SPOKE SPACES: Answer correctly here to earn that category's wedge.","FINAL ROUND: Return to hub with all 6 wedges, answer one final question."],winning:"First to collect all 6 wedges and answer the final hub question wins.",tips:["Always head toward your next needed wedge — don't wander randomly.","Know your weak categories so you can request your strongest at the final."]},
+  "Guess Who?":{objective:"Be first to correctly guess your opponent's mystery character.",setup:["Each player takes a game frame with all 24 faces standing.","Secretly draw a Mystery Card — your character. Keep hidden."],gameplay:["Ask ONE yes/no question per turn about appearance.","Flip down characters that don't match the answer.","GUESSING: State a name instead of asking — if correct, you win; if wrong, you lose."],winning:"First to correctly identify the opponent's character wins.",tips:["Best first questions eliminate ~half the board: brown hair, glasses, gender.","Don't guess too early — being wrong ends the game in your opponent's favor."]},
+  "Mystery Date":{objective:"Open the Mystery Door with a complete outfit set that matches your date.",setup:["Shuffle outfit cards (4 color sets) and deal 2 to each player.","Place remaining cards face-down."],gameplay:["On your turn: Draw a card, Trade with the deck, or Open the Mystery Door.","Collect 3 matching outfit cards of one color group.","OPEN THE DOOR: Reveals Beach, Ski, Bowling, Formal, or the Dud date.","Matching outfit = win! Non-matching = close the door.","DUD: Discard a card from your hand."],winning:"First whose outfit matches the revealed Mystery Date wins!",tips:["Watch others' sets and hold cards they need to block them.","The Dud appears often — only open when you truly have a complete set."]},
+  "Catch Phrase":{objective:"Score the most points by getting your team to say target words before the buzzer.",setup:["Divide into two even teams sitting alternately.","One Team A player starts with the disc and a countdown running."],gameplay:["Get your team to say the displayed word without saying it, parts of it, or rhymes.","You CAN use descriptions, synonyms, examples, gestures.","When team guesses, pass the disc to the left (opposing team).","BUZZER: Team NOT holding the disc scores a point."],winning:"First team to 7 points wins.",scoring:"1 point per round to the team NOT holding the disc when buzzer sounds.",tips:["Speed is everything — short, sharp clues score far more in a minute.","Hold the disc loosely at the edge for fastest possible passing."]},
+  "Risk":{objective:"Conquer the world or complete your Secret Mission first.",setup:["42 territories across 6 continents on the world map.","Claim territories by placing 1 army each until all claimed.","Reinforce with remaining armies as desired."],gameplay:["REINFORCE: Territories ÷ 3 (min 3) + continent bonuses + card sets.","ATTACK: Declare attack from your territory to adjacent enemy. Attacker rolls up to 3 dice; defender 1 or 2.","BATTLE: Compare highest dice — higher attacker die wins; ties go to defender.","Conquer a territory: Draw one Risk card at end of turn.","FORTIFY: Move armies between connected territories."],winning:"Eliminate all other players OR complete your Secret Mission first.",tips:["Australia: 4 territories, 2 bonus armies, only 1 entry point — best starting continent.","Never spread thin — concentrated force dominates every time.","Hold card sets until they're worth maximum armies."]},
+  "Taboo":{objective:"Score the most points getting teammates to say keywords without using forbidden words.",setup:["Divide into two teams.","One Team A player is Clue Giver. One Team B player is Watcher with buzzer.","Set the one-minute sand timer."],gameplay:["Clue Giver cannot say: the target word, any part of it, or the 5 Taboo words listed.","You CAN use synonyms, examples, personal references, stories.","WATCHER buzzes violations — card is discarded.","Get through as many cards as possible in one minute.","Teams alternate Clue Giver and Watcher roles."],winning:"First team to agreed point total (usually 4–7) wins.",scoring:"1 point per correct guess · -1 point per buzzer violation or pass",tips:["Context-set first: 'You do this at a gym...' then narrow down.","Speed is critical — a fast Clue Giver scores way more."]},
+};
+
+/* ─── LOCAL STORAGE ──────────────────────────────────────────────── */
+function load(key,fb){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fb;}catch{return fb;}}
+function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch{}}
+
+/* ─── CONFETTI ───────────────────────────────────────────────────── */
+function Confetti({onDone}){
+  const canvasRef=useRef(null);
+  useEffect(()=>{
+    const canvas=canvasRef.current;
+    if(!canvas)return;
+    const ctx=canvas.getContext("2d");
+    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+    const pieces=Array.from({length:140},()=>({
+      x:Math.random()*canvas.width, y:Math.random()*canvas.height-canvas.height,
+      r:Math.random()*8+4, d:Math.random()*140+80,
+      color:`hsl(${Math.random()*360},90%,60%)`,
+      tilt:Math.random()*10-10, tiltAngle:0,
+      tiltSpeed:Math.random()*0.07+0.05,
+    }));
+    let frame=0, raf;
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      pieces.forEach(p=>{
+        p.tiltAngle+=p.tiltSpeed;
+        p.y+=Math.cos(frame/10+p.d)+2;
+        p.x+=Math.sin(frame/10)*0.5;
+        p.tilt=Math.sin(p.tiltAngle)*12;
+        ctx.beginPath();
+        ctx.fillStyle=p.color;
+        ctx.ellipse(p.x,p.y,p.r,p.r*0.4,p.tilt,0,Math.PI*2);
+        ctx.fill();
+      });
+      frame++;
+      if(frame<220) raf=requestAnimationFrame(draw);
+      else onDone();
+    }
+    draw();
+    return()=>cancelAnimationFrame(raf);
+  },[]);
+  return <canvas ref={canvasRef} style={{position:"fixed",inset:0,zIndex:99999,pointerEvents:"none"}}/>;
+}
+
+/* ─── ONBOARDING TOOLTIP ─────────────────────────────────────────── */
+const TOUR_STEPS=[
+  {title:"Welcome to your Collection! 🎲",body:"This is your personal WS Game Company Vintage Bookshelf tracker. Let's take a quick tour of everything it can do.",target:null},
+  {title:"Your Bookshelf 📚",body:"Scroll left and right to browse all your games on the shelf. Hover a spine to see the title, click to open the full game details.",target:"shelf"},
+  {title:"Spine & Cover Views 🖼️",body:"Toggle between the classic spine view and a 4×6 cover grid to see your whole collection at a glance.",target:"toggle"},
+  {title:"Category Filter 🎨",body:"Click any coloured category pill below the shelf to instantly filter your collection. Click again to clear.",target:"legend"},
+  {title:"Dashboard 📊",body:"Click 'Dashboard' in the navigation bar to see rich stats about your collection — top-rated games, play history, category breakdown and more.",target:"nav"},
+  {title:"Game Details & Rules 📖",body:"Click any game card to open its detail view — how to play, difficulty rating, BGG score, your personal rating, and full step-by-step rules.",target:null},
+  {title:"Log Your Game Nights 🎮",body:"Inside each game's detail view, the Plays tab lets you log every session — who played, who won, snacks, and notes. Your history is saved automatically.",target:null},
+  {title:"Dark & Light Mode 🌙☀️",body:"Use the moon/sun button in the top navigation bar to switch between dark and light mode anytime.",target:"theme"},
+  {title:"You're all set! 🎉",body:"Enjoy tracking your collection! Everything is saved automatically in your browser. Happy gaming!",target:null},
+];
+
+function OnboardingTooltip({step,total,onNext,onSkip,theme:T}){
+  const s=TOUR_STEPS[step];
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none"}}>
+      <div style={{position:"fixed",bottom:32,left:"50%",transform:"translateX(-50%)",
+        background:T.card,border:`2px solid ${T.accent}`,borderRadius:20,padding:"22px 26px",
+        maxWidth:380,width:"calc(100% - 40px)",boxShadow:"0 24px 64px rgba(0,0,0,0.35)",
+        pointerEvents:"all",zIndex:9999,
+      }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,lineHeight:1.2}}>{s.title}</div>
+          <button onClick={onSkip} style={{background:"none",border:"none",color:T.textFaint,cursor:"pointer",fontSize:18,lineHeight:1,padding:"0 0 0 8px",flexShrink:0}}>✕</button>
+        </div>
+        <p style={{fontSize:14,color:T.textMuted,lineHeight:1.65,margin:"0 0 18px"}}>{s.body}</p>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{display:"flex",gap:5}}>
+            {Array.from({length:total}).map((_,i)=>(
+              <div key={i} style={{width:i===step?20:7,height:7,borderRadius:99,background:i===step?T.accent:T.textFaint,transition:"width 0.3s"}}/>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={onSkip} style={{background:"none",border:`1.5px solid ${T.cardBorder}`,color:T.textMuted,padding:"8px 16px",borderRadius:99,cursor:"pointer",fontSize:13,fontFamily:"'Outfit',sans-serif",fontWeight:600}}>Skip tour</button>
+            <button onClick={onNext} style={{background:T.accent,border:"none",color:"#fff",padding:"8px 18px",borderRadius:99,cursor:"pointer",fontSize:13,fontFamily:"'Outfit',sans-serif",fontWeight:700}}>
+              {step===total-1?"Let's go!":"Next →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── DIFFICULTY BADGE ───────────────────────────────────────────── */
+function DiffBadge({title,size=12}){
+  const d=DIFFICULTY[title]||2;
+  return(
+    <div style={{display:"inline-flex",alignItems:"center",gap:5}}>
+      <div style={{display:"flex",gap:2}}>
+        {[1,2,3,4,5].map(i=>(
+          <div key={i} style={{width:size*0.7,height:size*1.1,borderRadius:2,background:i<=d?DIFF_COLOR[d]:"rgba(0,0,0,0.12)",transition:"background 0.2s"}}/>
+        ))}
+      </div>
+      <span style={{fontSize:size,fontWeight:700,color:DIFF_COLOR[d]}}>{DIFF_LABEL[d]}</span>
+    </div>
+  );
+}
+
+/* ─── STARS ──────────────────────────────────────────────────────── */
+function Stars({val,onChange,theme:T}){
+  const [hov,setHov]=useState(0);
+  const labels=["","Meh 😐","It's OK 🙂","Like it! 😄","Love it! 😍","All-time fave! 🏆"];
+  return(
+    <div>
+      <div style={{display:"flex",gap:4}}>
+        {[1,2,3,4,5].map(i=>(
+          <span key={i} onClick={()=>onChange(val===i?0:i)}
+            onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(0)}
+            style={{fontSize:28,cursor:"pointer",color:i<=(hov||val)?"#f59e0b":(T?.cardBorder||"#d1d5db"),
+              transition:"all 0.1s",transform:hov===i?"scale(1.35)":"scale(1)",display:"inline-block",userSelect:"none",lineHeight:1}}>★</span>
+        ))}
+      </div>
+      {val>0&&<div style={{fontSize:12,color:T?.textMuted||"#64748b",marginTop:5,fontWeight:600}}>{labels[val]}</div>}
+    </div>
+  );
+}
+
+/* ─── RULES PANEL ────────────────────────────────────────────────── */
+function RulesPanel({game,sp,onClose,theme:T}){
+  const rules=FULL_RULES[game.title];
+  const [sec,setSec]=useState(0);
+  const sections=[
+    {key:"objective",label:"🎯 Objective"},{key:"setup",label:"⚙️ Setup"},
+    {key:"gameplay",label:"▶️ Gameplay"},{key:"winning",label:"🏆 Winning"},
+    {key:"tips",label:"💡 Tips"},
+    ...(rules?.variants?[{key:"variants",label:"🔀 Variants"}]:[]),
+    ...(rules?.scoring?[{key:"scoring",label:"📊 Scoring"}]:[]),
+  ];
+  return(
+    <div onClick={e=>e.stopPropagation()} style={{position:"fixed",inset:0,zIndex:10001,background:"rgba(0,0,0,0.82)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <style>{`@keyframes slideRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}`}</style>
+      <div style={{background:T.card,borderRadius:28,width:"100%",maxWidth:600,maxHeight:"92vh",display:"flex",flexDirection:"column",animation:"slideRight 0.3s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 48px 120px rgba(0,0,0,0.6)",border:`2px solid ${sp.bg}55`}}>
+        <div style={{background:`linear-gradient(135deg,${sp.bg}ee,${sp.bg}88)`,borderRadius:"26px 26px 0 0",padding:"22px 24px",display:"flex",alignItems:"center",gap:16,flexShrink:0}}>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>←</button>
+          <div style={{fontSize:36}}>{game.emoji}</div>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",letterSpacing:2,textTransform:"uppercase",fontWeight:700}}>Full Rules</div>
+            <div style={{fontWeight:900,fontSize:22,color:sp.text,lineHeight:1.1}}>{game.title}</div>
+          </div>
+        </div>
+        <div style={{display:"flex",overflowX:"auto",gap:6,padding:"14px 18px 0",flexShrink:0,scrollbarWidth:"none"}}>
+          {sections.map((s,i)=>(
+            <button key={s.key} onClick={()=>setSec(i)}
+              style={{padding:"8px 14px",borderRadius:99,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:12,flexShrink:0,
+                background:sec===i?sp.bg:`${T.surface}`,color:sec===i?sp.text:T.textMuted,
+                boxShadow:sec===i?`0 2px 10px ${sp.bg}66`:"none",transition:"all 0.18s"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <div style={{overflowY:"auto",padding:"18px 24px 28px",flex:1}}>
+          {rules?(<RuleSection sectionKey={sections[sec]?.key} rules={rules} sp={sp} T={T}/>):
+            <div style={{color:T.textMuted,textAlign:"center",padding:"40px 0"}}><div style={{fontSize:40}}>📋</div><div style={{marginTop:12,fontWeight:700}}>Detailed rules coming soon!</div></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+function RuleSection({sectionKey,rules,sp,T}){
+  const content=rules[sectionKey];
+  if(!content)return null;
+  if(typeof content==="string")return(
+    <div style={{background:T.surface,borderRadius:16,padding:20,border:`1.5px solid ${sp.bg}33`}}>
+      <p style={{color:T.text,fontSize:15,lineHeight:1.75,margin:0,fontWeight:500}}>{content}</p>
+    </div>
+  );
+  if(Array.isArray(content))return(
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {content.map((item,i)=>{
+        const bm=item.match(/^([A-Z][A-Z &/\-]+:)\s*(.+)$/);
+        return(
+          <div key={i} style={{display:"flex",gap:14,alignItems:"flex-start",background:T.surface,borderRadius:14,padding:"13px 16px",border:`1px solid ${T.cardBorder}`}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:`${sp.bg}55`,border:`1.5px solid ${sp.bg}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:sp.bg,flexShrink:0,marginTop:1}}>{i+1}</div>
+            <p style={{color:T.textMuted,fontSize:14,lineHeight:1.7,margin:0}}>
+              {bm?<><strong style={{color:T.text,fontWeight:800}}>{bm[1]}</strong> {bm[2]}</>:item}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+  return null;
+}
+
+/* ─── MODAL ──────────────────────────────────────────────────────── */
+const SNACKS=["🍕 Pizza","🍿 Popcorn","🌮 Tacos","🍔 Burgers","🍺 Beer","🥂 Wine","☕ Coffee","🧁 Cupcakes","🍦 Ice Cream","🥨 Pretzels","🍫 Chocolate","🧀 Cheese Board","🎉 Fancy Cocktails","🍣 Sushi","🥗 Salad"];
+
+function Modal({game,data,onClose,onUpdate,theme:T}){
+  const sp=SPINE[game.title]||{bg:"#6366f1",text:"#fff"};
+  const [tab,setTab]=useState("info");
+  const [notes,setNotes]=useState(data.notes||"");
+  const [owned,setOwned_]=useState(data.owned??game.ownedDefault);
+  const [myRating,setMyRating]=useState(data.myRating||0);
+  const [plays,setPlays]=useState(data.plays||[]);
+  const [showAdd,setShowAdd]=useState(false);
+  const [newPlay,setNewPlay]=useState({date:new Date().toISOString().split("T")[0],who:"",playNotes:"",snacks:[],winner:""});
+  const [showRules,setShowRules]=useState(false);
+
+  useEffect(()=>{
+    document.body.style.overflow="hidden";
+    const esc=e=>e.key==="Escape"&&(showRules?setShowRules(false):close());
+    window.addEventListener("keydown",esc);
+    return()=>{document.body.style.overflow="";window.removeEventListener("keydown",esc);};
+  },[showRules]);
+
+  function close(){onUpdate({notes,owned,myRating,plays});onClose();}
+  function toggleOwned(){const n=!owned;setOwned_(n);onUpdate({notes,owned:n,myRating,plays});}
+  function addPlay(){
+    if(!newPlay.who.trim())return;
+    const updated=[...plays,{...newPlay,id:Date.now()}];
+    setPlays(updated);onUpdate({notes,owned,myRating,plays:updated});
+    setNewPlay({date:new Date().toISOString().split("T")[0],who:"",playNotes:"",snacks:[],winner:""});
+    setShowAdd(false);
+  }
+  function delPlay(id){const u=plays.filter(p=>p.id!==id);setPlays(u);onUpdate({notes,owned,myRating,plays:u});}
+
+  const inp=(ex={})=>({fontFamily:"'Outfit',sans-serif",fontSize:14,border:`2px solid ${T.inputBorder}`,borderRadius:10,padding:"10px 14px",outline:"none",background:T.inputBg,color:T.text,width:"100%",...ex});
+
+  return(
+    <div onClick={close} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.88) translateY(24px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
+      <div onClick={e=>e.stopPropagation()} style={{background:T.card,borderRadius:28,width:"100%",maxWidth:540,maxHeight:"92vh",overflowY:"auto",animation:"popIn 0.32s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 48px 120px rgba(0,0,0,0.4)"}}>
+        {/* HERO */}
+        <div style={{background:`linear-gradient(150deg,${sp.bg},${sp.bg}88)`,borderRadius:"28px 28px 0 0",padding:"36px 24px 28px",textAlign:"center",position:"relative"}}>
+          <button onClick={close} style={{position:"absolute",top:14,right:14,background:"rgba(255,255,255,0.2)",border:"none",color:sp.text,width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <div style={{fontSize:76,marginBottom:10,filter:"drop-shadow(0 6px 18px rgba(0,0,0,0.3))"}}>{game.emoji}</div>
+          <h2 style={{fontWeight:900,fontSize:28,color:sp.text,margin:0,lineHeight:1.1}}>{game.title}</h2>
+          <div style={{marginTop:12,display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+            {game.tags.map(t=><span key={t} style={{background:"rgba(255,255,255,0.22)",color:sp.text,fontSize:12,fontWeight:600,padding:"4px 12px",borderRadius:99}}>{t}</span>)}
+          </div>
+          <div style={{marginTop:16,display:"flex",justifyContent:"center",gap:10}}>
+            <button onClick={toggleOwned} style={{background:owned?"#22c55e":"rgba(255,255,255,0.15)",border:owned?"none":"2px solid rgba(255,255,255,0.4)",color:"#fff",padding:"9px 22px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
+              {owned?"✓ In My Collection":"◯ Mark as Owned"}
+            </button>
+            <button onClick={toggleOwned} style={{background:!owned?"#ef4444":"rgba(255,255,255,0.15)",border:!owned?"none":"2px solid rgba(255,255,255,0.4)",color:"#fff",padding:"9px 22px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
+              {!owned?"♡ On My Wishlist":"Move to Wishlist"}
+            </button>
+          </div>
+        </div>
+        {/* TABS */}
+        <div style={{display:"flex",borderBottom:`2px solid ${T.cardBorder}`,background:T.card}}>
+          {[{k:"info",l:"📖 Info"},{k:"notes",l:"📝 Notes"},{k:"plays",l:`🎮 Plays (${plays.length})`}].map(t=>(
+            <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,padding:"14px 8px",border:"none",background:"transparent",fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",color:tab===t.k?T.accent:T.textMuted,borderBottom:tab===t.k?`3px solid ${T.accent}`:"3px solid transparent",transition:"all 0.2s"}}>
+              {t.l}
+            </button>
+          ))}
+        </div>
+        <div style={{padding:"22px 24px 32px"}}>
+          {/* INFO TAB */}
+          {tab==="info"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:18}}>
+              {/* Stats */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                {[["👥","Players",game.players],["🎂","Ages",game.ages],["⏱","Play Time",game.playTime]].map(([ic,lb,vl])=>(
+                  <div key={lb} style={{background:T.surface,borderRadius:14,padding:"14px 8px",textAlign:"center",border:`1px solid ${T.cardBorder}`}}>
+                    <div style={{fontSize:22,marginBottom:4}}>{ic}</div>
+                    <div style={{fontWeight:800,fontSize:15,color:T.text}}>{vl}</div>
+                    <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,marginTop:2}}>{lb}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Difficulty */}
+              <div style={{background:T.surface,borderRadius:14,padding:"14px 18px",border:`1px solid ${T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.textMuted,marginBottom:6}}>Difficulty</div>
+                  <DiffBadge title={game.title} size={13}/>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.textMuted,marginBottom:4}}>Category</div>
+                  <span style={{background:(CAT_COLOR[game.category]||"#6366f1")+"22",color:CAT_COLOR[game.category]||"#6366f1",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:99}}>{CAT_EMOJI[game.category]} {game.category}</span>
+                </div>
+              </div>
+              {/* How to play */}
+              <div>
+                <div style={{fontWeight:800,fontSize:15,color:T.text,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:7}}>
+                  <span>📖 How to Play</span>
+                  <button onClick={()=>setShowRules(true)}
+                    style={{background:`${sp.bg}18`,border:`1.5px solid ${sp.bg}55`,color:sp.bg,padding:"6px 14px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}
+                    onMouseEnter={e=>{e.currentTarget.style.background=sp.bg;e.currentTarget.style.color="#fff";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background=`${sp.bg}18`;e.currentTarget.style.color=sp.bg;}}>
+                    📋 Full Rules →
+                  </button>
+                </div>
+                <div onClick={()=>setShowRules(true)} style={{background:T.surface,borderRadius:14,padding:16,fontSize:14,color:T.textMuted,lineHeight:1.7,cursor:"pointer",border:`1.5px solid ${T.cardBorder}`,transition:"border-color 0.18s"}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor=sp.bg+"66"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor=T.cardBorder}>
+                  {game.howToPlay}
+                  <div style={{marginTop:8,color:sp.bg,fontSize:12,fontWeight:700}}>Tap for full rules →</div>
+                </div>
+              </div>
+              {/* Tip */}
+              <div style={{background:`${sp.bg}12`,border:`2px solid ${sp.bg}35`,borderRadius:14,padding:16}}>
+                <div style={{fontWeight:800,fontSize:13,color:sp.bg,marginBottom:6}}>💬 Pro Tip</div>
+                <div style={{fontSize:13,color:T.textMuted,lineHeight:1.7}}>{game.tip}</div>
+              </div>
+              {/* Ratings */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div style={{background:T.surface,borderRadius:14,padding:16,border:`1px solid ${T.cardBorder}`}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.textMuted,marginBottom:8}}>BGG Community</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                    <span style={{color:"#f59e0b",fontSize:22}}>★</span>
+                    <span style={{fontWeight:900,fontSize:32,color:T.text}}>{game.bggRating.toFixed(1)}</span>
+                    <span style={{fontSize:12,color:T.textMuted}}>/10</span>
+                  </div>
+                </div>
+                <div style={{background:T.surface,borderRadius:14,padding:16,border:`1px solid ${T.cardBorder}`}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.textMuted,marginBottom:10}}>My Rating</div>
+                  <Stars val={myRating} onChange={v=>{setMyRating(v);onUpdate({notes,owned,myRating:v,plays});}} theme={T}/>
+                </div>
+              </div>
+              {!owned&&(
+                <div style={{background:"#fff1f2",border:"2px solid #fca5a5",borderRadius:14,padding:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                  <div><div style={{fontWeight:800,color:"#dc2626",fontSize:15}}>Not in your collection yet</div><div style={{fontSize:12,color:"#ef4444",marginTop:3}}>${game.price} from wsgamecompany.com</div></div>
+                  <a href="https://www.wsgamecompany.com/collections/vintage-bookshelf-games" target="_blank" rel="noreferrer"
+                    style={{background:"#ef4444",color:"#fff",padding:"10px 16px",borderRadius:12,fontWeight:800,fontSize:13,textDecoration:"none",whiteSpace:"nowrap"}}>Buy →</a>
+                </div>
+              )}
+            </div>
+          )}
+          {/* NOTES TAB */}
+          {tab==="notes"&&(
+            <div>
+              <div style={{fontWeight:800,fontSize:15,color:T.text,marginBottom:12}}>📝 My Notes — {game.title}</div>
+              <textarea value={notes} onChange={e=>{setNotes(e.target.value);onUpdate({notes:e.target.value,owned,myRating,plays});}}
+                placeholder={`Jot anything here…\n• House rules we use\n• Best strategies\n• Funny moments\n• Who always wins 😅`}
+                style={{...inp(),height:220,resize:"vertical",lineHeight:1.7}}/>
+              <div style={{fontSize:12,color:T.textMuted,marginTop:8}}>Auto-saved as you type ✓</div>
+            </div>
+          )}
+          {/* PLAYS TAB */}
+          {tab==="plays"&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                <div style={{fontWeight:800,fontSize:15,color:T.text}}>🎮 Game Play Ledger</div>
+                <button onClick={()=>setShowAdd(!showAdd)} style={{background:T.accent,color:"#fff",border:"none",padding:"9px 18px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                  {showAdd?"✕ Cancel":"+ Log a Play"}
+                </button>
+              </div>
+              {showAdd&&(
+                <div style={{background:T.surface,borderRadius:18,padding:18,marginBottom:20,border:`2px solid ${T.accent}44`}}>
+                  <div style={{fontWeight:700,fontSize:14,color:T.accent,marginBottom:14}}>✨ New Session</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    <div><label style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:5}}>Date</label>
+                      <input type="date" value={newPlay.date} onChange={e=>setNewPlay({...newPlay,date:e.target.value})} style={inp()}/></div>
+                    <div><label style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:5}}>Winner 🏆</label>
+                      <input value={newPlay.winner} onChange={e=>setNewPlay({...newPlay,winner:e.target.value})} placeholder="Who won?" style={inp()}/></div>
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <label style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:5}}>Played With 👥</label>
+                    <input value={newPlay.who} onChange={e=>setNewPlay({...newPlay,who:e.target.value})} placeholder="Mom, Dad, Aunt Susan…" style={inp()}/>
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <label style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:5}}>Snacks 🍿</label>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {SNACKS.map(s=>{const sel=newPlay.snacks.includes(s);return(
+                        <span key={s} onClick={()=>setNewPlay({...newPlay,snacks:sel?newPlay.snacks.filter(x=>x!==s):[...newPlay.snacks,s]})}
+                          style={{fontSize:12,padding:"5px 12px",borderRadius:99,cursor:"pointer",border:`2px solid ${sel?T.accent:T.cardBorder}`,background:sel?T.accent+"22":T.inputBg,color:sel?T.accent:T.textMuted,fontWeight:sel?700:400,transition:"all 0.15s"}}>
+                          {s}
+                        </span>
+                      );})}
+                    </div>
+                  </div>
+                  <div style={{marginBottom:14}}>
+                    <label style={{fontSize:11,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:5}}>Notes 📓</label>
+                    <textarea value={newPlay.playNotes} onChange={e=>setNewPlay({...newPlay,playNotes:e.target.value})} placeholder="How did it go? Epic moments? Rules debates?" style={{...inp(),height:80,resize:"none"}}/>
+                  </div>
+                  <button onClick={addPlay} style={{width:"100%",background:`linear-gradient(135deg,${T.accent},#818cf8)`,color:"#fff",border:"none",padding:"13px",borderRadius:12,fontFamily:"'Outfit',sans-serif",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+                    💾 Save Session
+                  </button>
+                </div>
+              )}
+              {plays.length===0&&!showAdd&&(
+                <div style={{textAlign:"center",padding:"40px 0",color:T.textMuted}}>
+                  <div style={{fontSize:44}}>🎮</div>
+                  <div style={{fontWeight:700,fontSize:16,marginTop:10,color:T.textMuted}}>No plays logged yet</div>
+                  <div style={{fontSize:13,marginTop:5}}>Hit "+ Log a Play" after your first game night!</div>
+                </div>
+              )}
+              {plays.map(p=>(
+                <div key={p.id} style={{background:T.surface,borderRadius:16,padding:16,marginBottom:12,border:`1.5px solid ${T.cardBorder}`,position:"relative"}}>
+                  <button onClick={()=>delPlay(p.id)} style={{position:"absolute",top:10,right:12,background:"none",border:"none",color:T.textFaint,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,paddingRight:24}}>
+                    <div style={{fontWeight:800,fontSize:15,color:T.text}}>{new Date(p.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"long",day:"numeric",year:"numeric"})}</div>
+                    {p.winner&&<span style={{background:"#f59e0b22",color:"#f59e0b",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:99}}>🏆 {p.winner}</span>}
+                  </div>
+                  <div style={{fontSize:13,color:T.textMuted,marginBottom:6}}><span style={{fontWeight:700}}>With:</span> {p.who}</div>
+                  {p.snacks?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>{p.snacks.map(s=><span key={s} style={{fontSize:12,background:T.inputBg,border:`1.5px solid ${T.cardBorder}`,padding:"3px 10px",borderRadius:99,color:T.textMuted}}>{s}</span>)}</div>}
+                  {p.playNotes&&<div style={{fontSize:13,color:T.textMuted,background:T.inputBg,borderRadius:10,padding:"10px 12px",lineHeight:1.6,borderLeft:`3px solid ${T.accent}`}}>{p.playNotes}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {showRules&&<RulesPanel game={game} sp={sp} onClose={()=>setShowRules(false)} theme={T}/>}
+    </div>
+  );
+}
+
+/* ─── BOOKSHELF ──────────────────────────────────────────────────── */
+function BookSpine({game,sp,isOwned,onClick}){
+  const [hov,setHov]=useState(false);
+  return(
+    <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{width:64,height:hov?196:174,background:`linear-gradient(160deg,${sp.bg}ff,${sp.bg}cc)`,borderRadius:"3px 3px 0 0",cursor:"pointer",position:"relative",
+        transition:"height 0.22s cubic-bezier(.34,1.56,.64,1),box-shadow 0.2s",
+        boxShadow:hov?`inset -4px 0 10px rgba(0,0,0,0.25),0 -8px 20px ${sp.bg}66,3px 0 8px rgba(0,0,0,0.2)`:"inset -3px 0 8px rgba(0,0,0,0.2),2px 0 4px rgba(0,0,0,0.15)",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,
+        filter:isOwned?"none":"grayscale(0.55) brightness(0.75)"}}>
+      <div style={{position:"absolute",left:7,top:0,bottom:0,width:1.5,background:"rgba(255,255,255,0.12)",borderRadius:99}}/>
+      <div style={{fontSize:hov?26:22,marginBottom:8,filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.3))",transition:"font-size 0.2s",flexShrink:0}}>{game.emoji}</div>
+      <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:13,fontWeight:700,letterSpacing:1.4,color:sp.text,textShadow:"0 1px 4px rgba(0,0,0,0.4)",lineHeight:1.25,textAlign:"center",padding:"0 3px",flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit',sans-serif",overflow:"hidden"}}>{game.title}</div>
+      {isOwned?<div style={{position:"absolute",bottom:7,left:"50%",transform:"translateX(-50%)",width:7,height:7,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 8px #4ade8099"}}/>:
+        <div style={{position:"absolute",bottom:7,left:"50%",transform:"translateX(-50%)",width:7,height:7,borderRadius:"50%",background:"#f87171",boxShadow:"0 0 6px #f8717166"}}/>}
+      {hov&&<div style={{position:"absolute",bottom:"calc(100% + 10px)",left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,0.88)",color:"#fff",fontSize:11,fontWeight:700,padding:"5px 10px",borderRadius:8,whiteSpace:"nowrap",zIndex:20,pointerEvents:"none",boxShadow:"0 4px 14px rgba(0,0,0,0.3)"}}>
+        {game.title}<div style={{position:"absolute",bottom:-4,left:"50%",transform:"translateX(-50%)",width:8,height:8,background:"rgba(0,0,0,0.88)",clipPath:"polygon(0 0,100% 0,50% 100%)"}}/>
+      </div>}
+    </div>
+  );
+}
+
+function Bookshelf({games,gameData,onSelect,theme:T}){
+  const rowRef=useRef(null);
+  const [drag,setDrag]=useState({active:false,startX:0,scrollLeft:0});
+  return(
+    <div style={{background:"linear-gradient(180deg,#1a1a2e 0%,#16213e 100%)",padding:"28px 0 0",position:"relative"}}>
+      <div style={{textAlign:"center",fontSize:10,letterSpacing:4,textTransform:"uppercase",color:"#475569",fontWeight:700,marginBottom:18}}>— Scroll to browse your shelf —</div>
+      <div style={{position:"absolute",left:0,top:"50%",transform:"translateY(-50%)",zIndex:10,background:"linear-gradient(90deg,#1a1a2e,transparent)",width:40,height:"100%",pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <span style={{color:"rgba(255,255,255,0.3)",fontSize:20}}>‹</span>
+      </div>
+      <div style={{position:"absolute",right:0,top:"50%",transform:"translateY(-50%)",zIndex:10,background:"linear-gradient(270deg,#1a1a2e,transparent)",width:40,height:"100%",pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <span style={{color:"rgba(255,255,255,0.3)",fontSize:20}}>›</span>
+      </div>
+      <div ref={rowRef}
+        onMouseDown={e=>setDrag({active:true,startX:e.pageX-rowRef.current.offsetLeft,scrollLeft:rowRef.current.scrollLeft})}
+        onMouseMove={e=>{if(!drag.active)return;e.preventDefault();const x=e.pageX-rowRef.current.offsetLeft;rowRef.current.scrollLeft=drag.scrollLeft-(x-drag.startX);}}
+        onMouseUp={()=>setDrag({...drag,active:false})} onMouseLeave={()=>setDrag({...drag,active:false})}
+        style={{overflowX:"auto",overflowY:"hidden",cursor:drag.active?"grabbing":"grab",scrollbarWidth:"none",msOverflowStyle:"none",userSelect:"none"}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:3,padding:"0 40px",width:"max-content"}}>
+          {games.map(g=>{
+            const sp=SPINE[g.title]||{bg:"#6366f1",text:"#fff"};
+            const gd=gameData[g.id]||{};
+            return <BookSpine key={g.id} game={g} sp={sp} isOwned={gd.owned??g.ownedDefault} onClick={()=>onSelect(g)}/>;
+          })}
+        </div>
+      </div>
+      <div style={{height:20,background:T.shelfBoard,boxShadow:T.shelfShadow,position:"relative",zIndex:5}}/>
+      <div style={{height:8,background:"#7a5820"}}/>
+    </div>
+  );
+}
+
+/* ─── BOOK COVER GRID ────────────────────────────────────────────── */
+function BookCoverGrid({games,gameData,onSelect}){
+  return(
+    <div style={{background:"linear-gradient(180deg,#1a1a2e 0%,#16213e 100%)",padding:"24px 20px 0"}}>
+      <div style={{maxWidth:960,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,paddingBottom:24}}>
+        {games.map(g=>{
+          const sp=SPINE[g.title]||{bg:"#6366f1",text:"#fff"};
+          return <BookCover key={g.id} game={g} sp={sp} onClick={()=>onSelect(g)}/>;
+        })}
+      </div>
+      <div style={{height:16,background:"linear-gradient(180deg,#c8a870,#a07840)",boxShadow:"0 6px 0 #7a5820,0 8px 20px rgba(0,0,0,0.4)"}}/>
+      <div style={{height:6,background:"#7a5820"}}/>
+    </div>
+  );
+}
+function BookCover({game,sp,onClick}){
+  const [hov,setHov]=useState(false);
+  return(
+    <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{background:`linear-gradient(170deg,${sp.bg}ff,${sp.bg}cc)`,borderRadius:8,cursor:"pointer",position:"relative",aspectRatio:"3/4",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,padding:"14px 10px",
+        boxShadow:hov?"0 18px 40px rgba(0,0,0,0.45),0 0 0 2px rgba(255,255,255,0.25)":"0 3px 12px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.15)",
+        transform:hov?"translateY(-8px) scale(1.05)":"translateY(0) scale(1)",
+        transition:"all 0.22s cubic-bezier(.34,1.56,.64,1)",overflow:"hidden",border:"1px solid rgba(255,255,255,0.15)"}}>
+      <div style={{position:"absolute",inset:0,pointerEvents:"none",backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(0,0,0,0.025) 4px,rgba(0,0,0,0.025) 5px)",borderRadius:8}}/>
+      <div style={{position:"absolute",left:0,top:0,bottom:0,width:7,background:"rgba(0,0,0,0.2)",borderRadius:"8px 0 0 8px",pointerEvents:"none"}}/>
+      <div style={{fontSize:hov?46:40,filter:"drop-shadow(0 3px 10px rgba(0,0,0,0.35))",transition:"font-size 0.18s",lineHeight:1,position:"relative",zIndex:1,flexShrink:0}}>{game.emoji}</div>
+      <div style={{fontFamily:"'Outfit',sans-serif",fontWeight:800,fontSize:11,color:sp.text,textShadow:"0 1px 5px rgba(0,0,0,0.45)",textAlign:"center",lineHeight:1.3,position:"relative",zIndex:1,width:"100%",wordBreak:"break-word"}}>{game.title}</div>
+    </div>
+  );
+}
+
+/* ─── GAME CARD ──────────────────────────────────────────────────── */
+function GameCard({game,gameData,onClick,theme:T}){
+  const [hov,setHov]=useState(false);
+  const sp=SPINE[game.title]||{bg:"#6366f1",text:"#fff"};
+  const gd=gameData[game.id]||{};
+  const isOwned=gd.owned??game.ownedDefault;
+  const myR=gd.myRating||0;
+  const plays=(gd.plays||[]).length;
+  const diff=DIFFICULTY[game.title]||2;
+  return(
+    <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{background:T.card,borderRadius:22,overflow:"hidden",cursor:"pointer",
+        boxShadow:hov?"0 22px 52px rgba(0,0,0,0.16)":"0 2px 16px rgba(0,0,0,0.07)",
+        transform:hov?"translateY(-8px) scale(1.025)":"translateY(0) scale(1)",
+        transition:"all 0.25s cubic-bezier(.34,1.56,.64,1)",
+        border:`2px solid ${isOwned?T.cardBorder:"#fca5a5"}`,
+        borderStyle:isOwned?"solid":"dashed"}}>
+      <div style={{background:`linear-gradient(145deg,${sp.bg}ee,${sp.bg}99)`,height:116,display:"flex",alignItems:"center",justifyContent:"center",fontSize:52,position:"relative"}}>
+        <span style={{filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.28))"}}>{game.emoji}</span>
+        <div style={{position:"absolute",top:10,right:10}}>
+          {isOwned?<span style={{background:"rgba(255,255,255,0.25)",color:"#fff",fontSize:16,width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✓</span>:
+            <span style={{background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:99,letterSpacing:0.5}}>WISH LIST</span>}
+        </div>
+        {plays>0&&<div style={{position:"absolute",bottom:8,right:10,background:"rgba(0,0,0,0.45)",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:99}}>🎮 {plays}</div>}
+      </div>
+      <div style={{padding:"13px 15px 17px"}}>
+        <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:5,lineHeight:1.2}}>{game.title}</div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+          <span style={{background:(CAT_COLOR[game.category]||"#6366f1")+"22",color:CAT_COLOR[game.category]||"#6366f1",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:99}}>{game.category}</span>
+          <span style={{background:T.surface,color:T.textMuted,fontSize:11,padding:"3px 10px",borderRadius:99}}>⏱ {game.playTime}</span>
+        </div>
+        {/* Difficulty bar on card */}
+        <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
+          {[1,2,3,4,5].map(i=><div key={i} style={{flex:1,height:4,borderRadius:99,background:i<=diff?DIFF_COLOR[diff]:T.cardBorder,transition:"background 0.2s"}}/>)}
+          <span style={{fontSize:10,fontWeight:700,color:DIFF_COLOR[diff],flexShrink:0,marginLeft:2}}>{DIFF_LABEL[diff]}</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:12,color:T.textMuted}}>👥 {game.players} · 🎂 {game.ages}</span>
+          {!isOwned&&<span style={{fontWeight:800,fontSize:17,color:"#ef4444"}}>${game.price}</span>}
+        </div>
+        <div style={{marginTop:9,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{color:"#f59e0b",fontSize:13}}>★</span>
+            <span style={{fontWeight:700,fontSize:13,color:T.text}}>{game.bggRating.toFixed(1)}</span>
+            <span style={{fontSize:11,color:T.textMuted}}>BGG</span>
+          </div>
+          {myR>0&&<div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=myR?"#f59e0b":T.cardBorder,fontSize:13}}>★</span>)}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── DASHBOARD ──────────────────────────────────────────────────── */
+function Dashboard({gameData,theme:T,onSelectGame}){
+  const gamesWithData=INIT_GAMES.map(g=>({...g,gd:gameData[g.id]||{},isOwned:gameData[g.id]?.owned??g.ownedDefault}));
+  const owned=gamesWithData.filter(g=>g.isOwned);
+  const missing=gamesWithData.filter(g=>!g.isOwned);
+  const rated=gamesWithData.filter(g=>g.gd.myRating>0);
+  const allPlays=gamesWithData.flatMap(g=>(g.gd.plays||[]).map(p=>({...p,game:g})));
+  const totalPlays=allPlays.length;
+  const avgBGG=(owned.reduce((s,g)=>s+g.bggRating,0)/Math.max(owned.length,1)).toFixed(1);
+  const topRated=[...rated].sort((a,b)=>b.gd.myRating-a.gd.myRating).slice(0,5);
+  const mostPlayed=[...gamesWithData].sort((a,b)=>(b.gd.plays||[]).length-(a.gd.plays||[]).length).filter(g=>(g.gd.plays||[]).length>0).slice(0,5);
+  const recentPlays=[...allPlays].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const catCounts=Object.entries(CAT_COLOR).map(([cat,color])=>({cat,color,emoji:CAT_EMOJI[cat],count:owned.filter(g=>g.category===cat).length,total:INIT_GAMES.filter(g=>g.category===cat).length})).filter(c=>c.count>0).sort((a,b)=>b.count-a.count);
+  const missingCost=missing.reduce((s,g)=>s+g.price,0);
+  const diffCounts=[1,2,3,4,5].map(d=>({d,label:DIFF_LABEL[d],color:DIFF_COLOR[d],count:owned.filter(g=>DIFFICULTY[g.title]===d).length}));
+
+  const Stat=({n,label,color,sub})=>(
+    <div style={{background:T.surface,border:`1px solid ${T.cardBorder}`,borderRadius:18,padding:"20px 18px",textAlign:"center"}}>
+      <div style={{fontWeight:900,fontSize:36,color:color||T.text,lineHeight:1}}>{n}</div>
+      <div style={{fontSize:12,fontWeight:700,color:T.textMuted,textTransform:"uppercase",letterSpacing:1,marginTop:4}}>{label}</div>
+      {sub&&<div style={{fontSize:11,color:T.textFaint,marginTop:4}}>{sub}</div>}
+    </div>
+  );
+
+  return(
+    <div style={{maxWidth:1100,margin:"0 auto",padding:"32px 20px 60px"}}>
+      <div style={{marginBottom:28}}>
+        <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:28,color:T.text,margin:"0 0 6px",letterSpacing:-0.5}}>Collection Dashboard 📊</h2>
+        <p style={{color:T.textMuted,fontSize:14,margin:0}}>A deep-dive into your WS Game Company collection</p>
+      </div>
+
+      {/* Top stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12,marginBottom:28}}>
+        <Stat n={owned.length} label="Owned" color="#4ade80" sub={`of ${INIT_GAMES.length} total`}/>
+        <Stat n={missing.length} label="Wishlist" color="#f87171" sub={`$${missingCost} to complete`}/>
+        <Stat n={`${Math.round(owned.length/INIT_GAMES.length*100)}%`} label="Complete" color="#818cf8"/>
+        <Stat n={totalPlays} label="Total Plays" color="#f59e0b" sub={totalPlays===1?"1 session":totalPlays>0?`across ${new Set(allPlays.map(p=>p.game.id)).size} games`:"Log your first!"}/>
+        <Stat n={avgBGG} label="Avg BGG Rating" color="#06b6d4" sub="owned games"/>
+        <Stat n={rated.length} label="You've Rated" color="#a78bfa" sub={`of ${owned.length} owned`}/>
+      </div>
+
+      {/* Two column grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:20}}>
+
+        {/* Category breakdown */}
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:20,padding:22}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:16}}>📂 By Category</div>
+          {catCounts.map(({cat,color,emoji,count,total})=>(
+            <div key={cat} style={{marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <span style={{fontSize:16}}>{emoji}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>{cat}</span>
+                </div>
+                <span style={{fontSize:12,fontWeight:600,color:T.textMuted}}>{count}/{total}</span>
+              </div>
+              <div style={{background:T.surface,borderRadius:99,height:8,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${count/total*100}%`,background:color,borderRadius:99,transition:"width 0.8s ease"}}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Difficulty spread */}
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:20,padding:22}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:16}}>🎯 Difficulty Spread</div>
+          {diffCounts.filter(d=>d.count>0).map(({d,label,color,count})=>(
+            <div key={d} style={{marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <div style={{display:"flex",gap:2}}>{[1,2,3,4,5].map(i=><div key={i} style={{width:8,height:12,borderRadius:2,background:i<=d?color:T.surface}}/>)}</div>
+                  <span style={{fontSize:13,fontWeight:700,color:T.text}}>{label}</span>
+                </div>
+                <span style={{fontSize:12,fontWeight:600,color:T.textMuted}}>{count} game{count!==1?"s":""}</span>
+              </div>
+              <div style={{background:T.surface,borderRadius:99,height:8,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${count/owned.length*100}%`,background:color,borderRadius:99,transition:"width 0.8s ease"}}/>
+              </div>
+            </div>
+          ))}
+          {owned.length===0&&<p style={{color:T.textMuted,fontSize:13}}>Mark games as owned to see your difficulty spread.</p>}
+        </div>
+
+        {/* Top rated by you */}
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:20,padding:22}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:16}}>⭐ Your Top Rated</div>
+          {topRated.length===0
+            ?<p style={{color:T.textMuted,fontSize:13}}>Rate games in the detail view to see your favourites here.</p>
+            :topRated.map((g,i)=>{
+              const sp=SPINE[g.title]||{bg:"#6366f1"};
+              return(
+                <div key={g.id} onClick={()=>onSelectGame(g)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:14,cursor:"pointer",marginBottom:6,border:`1px solid ${T.cardBorder}`,background:T.surface,transition:"all 0.15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=sp.bg+"22"} onMouseLeave={e=>e.currentTarget.style.background=T.surface}>
+                  <div style={{fontWeight:900,fontSize:18,color:T.textFaint,width:24,textAlign:"center"}}>#{i+1}</div>
+                  <div style={{fontSize:26}}>{g.emoji}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14,color:T.text}}>{g.title}</div>
+                    <div style={{display:"flex",gap:2,marginTop:3}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=g.gd.myRating?"#f59e0b":T.cardBorder,fontSize:14}}>★</span>)}</div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Most played */}
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:20,padding:22}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:16}}>🎮 Most Played</div>
+          {mostPlayed.length===0
+            ?<p style={{color:T.textMuted,fontSize:13}}>Log game sessions to see which games hit the table most often.</p>
+            :mostPlayed.map((g,i)=>{
+              const sp=SPINE[g.title]||{bg:"#6366f1"};
+              const count=(g.gd.plays||[]).length;
+              return(
+                <div key={g.id} onClick={()=>onSelectGame(g)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:14,cursor:"pointer",marginBottom:6,border:`1px solid ${T.cardBorder}`,background:T.surface,transition:"all 0.15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=sp.bg+"22"} onMouseLeave={e=>e.currentTarget.style.background=T.surface}>
+                  <div style={{fontWeight:900,fontSize:18,color:T.textFaint,width:24,textAlign:"center"}}>#{i+1}</div>
+                  <div style={{fontSize:26}}>{g.emoji}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14,color:T.text}}>{g.title}</div>
+                    <div style={{fontSize:12,color:T.textMuted,marginTop:2}}>{count} session{count!==1?"s":""}</div>
+                  </div>
+                  <div style={{background:`${sp.bg}22`,color:sp.bg,fontWeight:800,fontSize:14,padding:"4px 10px",borderRadius:99}}>{count}×</div>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Recent plays */}
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:20,padding:22,gridColumn:"1 / -1"}}>
+          <div style={{fontWeight:800,fontSize:16,color:T.text,marginBottom:16}}>🗓️ Recent Game Nights</div>
+          {recentPlays.length===0
+            ?<p style={{color:T.textMuted,fontSize:13}}>Your logged game sessions will appear here. Start by opening any game and tapping the Plays tab!</p>
+            :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+              {recentPlays.map((p,i)=>{
+                const sp=SPINE[p.game.title]||{bg:"#6366f1"};
+                return(
+                  <div key={i} onClick={()=>onSelectGame(p.game)} style={{background:T.surface,borderRadius:14,padding:14,border:`1.5px solid ${T.cardBorder}`,cursor:"pointer",transition:"all 0.15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor=sp.bg} onMouseLeave={e=>e.currentTarget.style.borderColor=T.cardBorder}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                      <div style={{width:38,height:38,borderRadius:10,background:`${sp.bg}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{p.game.emoji}</div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:T.text}}>{p.game.title}</div>
+                        <div style={{fontSize:11,color:T.textMuted}}>{new Date(p.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
+                      </div>
+                      {p.winner&&<div style={{marginLeft:"auto",background:"#f59e0b22",color:"#f59e0b",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:99,flexShrink:0}}>🏆 {p.winner}</div>}
+                    </div>
+                    <div style={{fontSize:12,color:T.textMuted}}>With: {p.who}</div>
+                    {p.snacks?.length>0&&<div style={{fontSize:11,color:T.textFaint,marginTop:4}}>{p.snacks.slice(0,3).join(" · ")}{p.snacks.length>3?` +${p.snacks.length-3} more`:""}</div>}
+                  </div>
+                );
+              })}
+            </div>}
+        </div>
+
+        {/* Wishlist */}
+        {missing.length>0&&(
+          <div style={{background:"linear-gradient(135deg,#0f0c29,#302b63)",borderRadius:20,padding:22,gridColumn:"1 / -1"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14,marginBottom:18}}>
+              <div>
+                <div style={{fontSize:11,letterSpacing:3,textTransform:"uppercase",color:"#a5b4fc",fontWeight:700,marginBottom:4}}>Complete Your Collection</div>
+                <div style={{fontWeight:900,fontSize:32,color:"#fff"}}>${missingCost}<span style={{fontSize:14,fontWeight:400,color:"#64748b"}}> estimated</span></div>
+              </div>
+              <a href="https://www.wsgamecompany.com/collections/vintage-bookshelf-games" target="_blank" rel="noreferrer"
+                style={{background:"linear-gradient(135deg,#6366f1,#818cf8)",color:"#fff",padding:"13px 24px",borderRadius:14,fontWeight:800,fontSize:14,textDecoration:"none",boxShadow:"0 4px 20px rgba(99,102,241,0.4)"}}>
+                Shop at WS Game Co →
+              </a>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+              {missing.map(g=>{
+                const sp=SPINE[g.title]||{bg:"#6366f1"};
+                return(
+                  <div key={g.id} onClick={()=>onSelectGame(g)} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",cursor:"pointer",transition:"all 0.15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.12)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.07)"}>
+                    <div style={{fontSize:22}}>{g.emoji}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13,color:"#fff"}}>{g.title}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>${g.price}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── LEGEND ─────────────────────────────────────────────────────── */
+const LEGEND_CATS=[{cat:"Strategy",color:"#2563eb",emoji:"⚔️"},{cat:"Word",color:"#16a34a",emoji:"🔤"},{cat:"Party",color:"#c0392b",emoji:"🎉"},{cat:"Children",color:"#ca8a04",emoji:"🧸"},{cat:"Dexterity",color:"#b45309",emoji:"🤚"},{cat:"Mystery",color:"#7c3aed",emoji:"🔍"},{cat:"Deduction",color:"#0891b2",emoji:"🧩"},{cat:"Trivia",color:"#854d0e",emoji:"🧠"},{cat:"Family",color:"#0369a1",emoji:"👨‍👩‍👧"},{cat:"Classic",color:"#92400e",emoji:"🏛️"},{cat:"Dice",color:"#ea580c",emoji:"🎲"}];
+
+/* ─── ROOT APP ───────────────────────────────────────────────────── */
+function App(){
+  const [gameData,setGameData_]=useState(()=>load("wsGameData",{}));
+  const [themeName,setThemeName]=useState(()=>load("wsTheme","dark"));
+  const [page,setPage]=useState("collection"); // "collection" | "dashboard"
+  const [filter,setFilter]=useState("all");
+  const [search,setSearch]=useState("");
+  const [active,setActive]=useState(null);
+  const [shelfView,setShelfView]=useState("spine");
+  const [catFilter,setCatFilter]=useState(null);
+  const [showConfetti,setShowConfetti]=useState(false);
+  const [tourStep,setTourStep]=useState(()=>load("wsTourDone",false)?-1:0);
+  const prevOwned=useRef(null);
+
+  const T=THEMES[themeName];
+  function setGameData(d){setGameData_(d);save("wsGameData",d);}
+  function updateGame(id,patch){
+    const next={...gameData,[id]:{...(gameData[id]||{}),...patch}};
+    // Check if owned count just increased
+    const wasOwned=prevOwned.current??INIT_GAMES.filter(g=>gameData[g.id]?.owned??g.ownedDefault).length;
+    const nowOwned=INIT_GAMES.filter(g=>next[g.id]?.owned??g.ownedDefault).length;
+    if(nowOwned>wasOwned){setShowConfetti(true);}
+    prevOwned.current=nowOwned;
+    setGameData(next);
+  }
+  function toggleTheme(){const n=themeName==="dark"?"light":"dark";setThemeName(n);save("wsTheme",n);}
+  function finishTour(){setTourStep(-1);save("wsTourDone",true);}
+
+  const owned=INIT_GAMES.filter(g=>gameData[g.id]?.owned??g.ownedDefault).length;
+  const missing=INIT_GAMES.length-owned;
+  const pct=Math.round(owned/INIT_GAMES.length*100);
+  const missingCost=INIT_GAMES.filter(g=>!(gameData[g.id]?.owned??g.ownedDefault)).reduce((s,g)=>s+g.price,0);
+
+  const visible=INIT_GAMES.filter(g=>{
+    const isOwned=gameData[g.id]?.owned??g.ownedDefault;
+    const fOk=filter==="all"||(filter==="owned"&&isOwned)||(filter==="missing"&&!isOwned);
+    const cOk=!catFilter||g.category===catFilter;
+    const q=search.toLowerCase();
+    const sOk=!q||g.title.toLowerCase().includes(q)||g.category.toLowerCase().includes(q)||g.tags.some(t=>t.toLowerCase().includes(q));
+    return fOk&&cOk&&sOk;
+  });
+
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,fontFamily:"'Outfit','Inter',system-ui,sans-serif",transition:"background 0.3s,color 0.3s"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        *{box-sizing:border-box}
+        ::-webkit-scrollbar{height:4px;width:5px}
+        ::-webkit-scrollbar-thumb{background:${T.textFaint};border-radius:99px}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+      `}</style>
+
+      {showConfetti&&<Confetti onDone={()=>setShowConfetti(false)}/>}
+      {tourStep>=0&&tourStep<TOUR_STEPS.length&&(
+        <OnboardingTooltip step={tourStep} total={TOUR_STEPS.length}
+          onNext={()=>tourStep===TOUR_STEPS.length-1?finishTour():setTourStep(t=>t+1)}
+          onSkip={finishTour} theme={T}/>
+      )}
+
+      {/* ── NAV ── */}
+      <div style={{background:T.navBg,backdropFilter:"blur(16px)",borderBottom:`1px solid ${T.cardBorder}`,padding:"0 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,height:56}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:22}}>🎲</span>
+          <span style={{fontWeight:900,fontSize:16,color:T.text,letterSpacing:-0.5}}>GameShelf</span>
+        </div>
+        <div style={{display:"flex",gap:4}}>
+          {[{k:"collection",l:"📚 Collection"},{k:"dashboard",l:"📊 Dashboard"}].map(({k,l})=>(
+            <button key={k} onClick={()=>setPage(k)}
+              style={{padding:"8px 16px",borderRadius:99,border:"none",fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s",
+                background:page===k?T.accent:"transparent",color:page===k?"#fff":T.textMuted}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={()=>{setTourStep(0);save("wsTourDone",false);}} title="Restart tour"
+            style={{background:"none",border:`1.5px solid ${T.cardBorder}`,color:T.textMuted,width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            ?
+          </button>
+          <button onClick={toggleTheme} title={`Switch to ${themeName==="dark"?"light":"dark"} mode`}
+            style={{background:"none",border:`1.5px solid ${T.cardBorder}`,color:T.text,width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+            {themeName==="dark"?"☀️":"🌙"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── DASHBOARD PAGE ── */}
+      {page==="dashboard"&&(
+        <Dashboard gameData={gameData} theme={T} onSelectGame={g=>{setPage("collection");setTimeout(()=>setActive(g),100);}}/>
+      )}
+
+      {/* ── COLLECTION PAGE ── */}
+      {page==="collection"&&(<>
+        {/* HEADER */}
+        <div style={{background:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)",padding:"36px 24px 0",textAlign:"center",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle at 15% 40%,rgba(99,102,241,.22) 0%,transparent 55%),radial-gradient(circle at 85% 20%,rgba(244,114,182,.15) 0%,transparent 50%)",pointerEvents:"none"}}/>
+          <div style={{position:"relative"}}>
+            <div style={{fontSize:11,letterSpacing:4,textTransform:"uppercase",color:"#a5b4fc",fontWeight:700,marginBottom:10}}>WS Game Company · Vintage Bookshelf Series</div>
+            <h1 style={{fontSize:"clamp(26px,5vw,44px)",fontWeight:900,color:"#fff",margin:0,letterSpacing:-1.5,lineHeight:1}}>My Game Collection 🎲</h1>
+            <p style={{color:"#94a3b8",fontSize:14,margin:"10px auto 0",maxWidth:380}}>Track, rate &amp; discover all 22 vintage bookshelf classics</p>
+            {/* Progress */}
+            <div style={{maxWidth:480,margin:"22px auto 0",background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",borderRadius:20,padding:"16px 22px",border:"1px solid rgba(255,255,255,0.08)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:11}}>
+                {[{n:owned,l:"Owned",c:"#4ade80"},{n:missing,l:"Wishlist",c:"#f87171"},{n:INIT_GAMES.length,l:"Total",c:"#fff"},{n:pct+"%",l:"Complete",c:"#a5b4fc"}].map(({n,l,c})=>(
+                  <div key={l} style={{textAlign:"center"}}>
+                    <div style={{fontWeight:900,fontSize:24,color:c,lineHeight:1}}>{n}</div>
+                    <div style={{fontSize:10,color:"#64748b",letterSpacing:1.5,textTransform:"uppercase",marginTop:3}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"rgba(255,255,255,0.08)",borderRadius:99,height:10,overflow:"hidden"}}>
+                <div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,#6366f1,#4ade80)",borderRadius:99,boxShadow:"0 0 14px rgba(99,102,241,.7)",transition:"width 1s ease"}}/>
+              </div>
+              {missing>0&&<div style={{fontSize:11,color:"#64748b",marginTop:7,textAlign:"right"}}>Complete for <span style={{color:"#f87171",fontWeight:700}}>${missingCost}</span></div>}
+            </div>
+            {/* View toggle */}
+            <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:24,marginBottom:0}}>
+              {[{k:"spine",icon:"📚",label:"Spine View"},{k:"covers",icon:"🖼️",label:"Cover Grid"}].map(({k,icon,label})=>(
+                <button key={k} onClick={()=>setShelfView(k)}
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"10px 22px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",border:"none",transition:"all 0.22s",
+                    background:shelfView===k?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.06)",
+                    color:shelfView===k?"#fff":"#64748b",
+                    boxShadow:shelfView===k?"0 0 0 1.5px rgba(255,255,255,0.3)":"none",backdropFilter:"blur(4px)"}}>
+                  <span style={{fontSize:16}}>{icon}</span>{label}
+                </button>
+              ))}
+            </div>
+            {/* Shelf */}
+            <div style={{marginTop:18}}>
+              {shelfView==="spine"
+                ?<Bookshelf games={INIT_GAMES} gameData={gameData} onSelect={setActive} theme={T}/>
+                :<BookCoverGrid games={INIT_GAMES} gameData={gameData} onSelect={setActive}/>}
+            </div>
+          </div>
+        </div>
+
+        {/* CATEGORY LEGEND */}
+        <div style={{background:"#1a1a2e",borderTop:"1px solid rgba(255,255,255,0.06)",padding:"16px 24px"}}>
+          <div style={{maxWidth:1200,margin:"0 auto"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+              <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:"#475569",fontWeight:700}}>Filter by Category</div>
+              {catFilter&&<button onClick={()=>setCatFilter(null)} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#e2e8f0",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:99,cursor:"pointer",fontFamily:"'Outfit',sans-serif"}}>✕ Clear</button>}
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
+              {LEGEND_CATS.map(({cat,color,emoji})=>{
+                const count=INIT_GAMES.filter(g=>g.category===cat).length;
+                const isActive=catFilter===cat;
+                return(
+                  <div key={cat} onClick={()=>setCatFilter(isActive?null:cat)}
+                    style={{display:"flex",alignItems:"center",gap:7,background:isActive?color:"rgba(255,255,255,0.05)",border:`1.5px solid ${isActive?color:color+"55"}`,borderRadius:99,padding:"7px 14px",cursor:"pointer",transition:"all 0.18s",boxShadow:isActive?`0 0 16px ${color}66`:"none",transform:isActive?"scale(1.06)":"scale(1)"}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:isActive?"rgba(255,255,255,0.8)":color,flexShrink:0}}/>
+                    <span style={{fontSize:13}}>{emoji}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:isActive?"#fff":"#e2e8f0"}}>{cat}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:isActive?"rgba(255,255,255,0.8)":"#475569",background:isActive?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.07)",padding:"1px 7px",borderRadius:99}}>{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
+              <div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:8,height:8,borderRadius:"50%",background:"#4ade80"}}/><span style={{fontSize:11,color:"#64748b",fontWeight:600}}>Owned</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:8,height:8,borderRadius:"50%",background:"#f87171"}}/><span style={{fontSize:11,color:"#64748b",fontWeight:600}}>Wishlist</span></div>
+              <span style={{fontSize:11,color:"#475569"}}>Faded = not yet owned · Hover spine to see title · Click to open</span>
+            </div>
+          </div>
+        </div>
+
+        {/* STICKY FILTER BAR */}
+        <div style={{background:T.navBg,backdropFilter:"blur(16px)",boxShadow:`0 2px 20px rgba(0,0,0,0.08)`,padding:"12px 20px",display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",position:"sticky",top:56,zIndex:100,borderBottom:`1px solid ${T.cardBorder}`}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {[["all",`All ${INIT_GAMES.length}`],["owned",`✓ Owned ${owned}`],["missing",`◯ Wishlist ${missing}`]].map(([k,l])=>(
+              <button key={k} onClick={()=>setFilter(k)}
+                style={{padding:"8px 18px",borderRadius:99,fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:filter===k?T.accent:T.surface,color:filter===k?"#fff":T.textMuted,transition:"all 0.2s"}}>
+                {l}
+              </button>
+            ))}
+            {catFilter&&(()=>{
+              const entry=LEGEND_CATS.find(l=>l.cat===catFilter);
+              return(
+                <div style={{display:"flex",alignItems:"center",gap:6,background:entry?.color+"18",border:`1.5px solid ${entry?.color}55`,borderRadius:99,padding:"6px 14px"}}>
+                  <span style={{fontSize:14}}>{entry?.emoji}</span>
+                  <span style={{fontWeight:700,fontSize:13,color:entry?.color}}>{catFilter}</span>
+                  <button onClick={()=>setCatFilter(null)} style={{background:"none",border:"none",color:entry?.color,cursor:"pointer",fontSize:16,lineHeight:1,padding:"0 0 0 2px",fontWeight:700}}>×</button>
+                </div>
+              );
+            })()}
+          </div>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search games…"
+            style={{padding:"8px 18px",borderRadius:99,border:`2px solid ${T.inputBorder}`,fontFamily:"'Outfit',sans-serif",fontSize:13,outline:"none",width:220,color:T.text,background:T.inputBg,transition:"border-color 0.2s"}}
+            onFocus={e=>e.target.style.borderColor=T.accent} onBlur={e=>e.target.style.borderColor=T.inputBorder}/>
+        </div>
+
+        {/* GAME GRID */}
+        <div style={{maxWidth:1200,margin:"0 auto",padding:"26px 20px 60px"}}>
+          {visible.length===0
+            ?<div style={{textAlign:"center",padding:"80px 0",color:T.textMuted}}><div style={{fontSize:52}}>🎮</div><div style={{fontWeight:800,fontSize:18,marginTop:12,color:T.textMuted}}>No games found</div></div>
+            :<>
+              <div style={{fontSize:13,color:T.textMuted,marginBottom:16,fontWeight:600,animation:"fadeInUp 0.3s ease"}}>
+                Showing {visible.length} game{visible.length!==1?"s":""}
+                {catFilter&&<span style={{color:T.accent}}> in <strong>{catFilter}</strong></span>}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:18}}>
+                {visible.map(g=>(
+                  <div key={g.id} style={{animation:"fadeInUp 0.3s ease"}}>
+                    <GameCard game={g} gameData={gameData} onClick={()=>setActive(g)} theme={T}/>
+                  </div>
+                ))}
+              </div>
+            </>}
+          {filter==="missing"&&missing>0&&(
+            <div style={{marginTop:36,background:"linear-gradient(135deg,#0f0c29,#302b63)",borderRadius:22,padding:"26px 30px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20,boxShadow:"0 12px 40px rgba(15,12,41,.35)"}}>
+              <div>
+                <div style={{fontSize:11,letterSpacing:3,textTransform:"uppercase",color:"#a5b4fc",fontWeight:700,marginBottom:6}}>Complete Your Collection</div>
+                <div style={{fontWeight:900,fontSize:36,color:"#fff"}}>${missingCost}<span style={{fontSize:16,fontWeight:400,color:"#64748b"}}>.00 est.</span></div>
+              </div>
+              <a href="https://www.wsgamecompany.com/collections/vintage-bookshelf-games" target="_blank" rel="noreferrer"
+                style={{background:"linear-gradient(135deg,#6366f1,#818cf8)",color:"#fff",padding:"15px 26px",borderRadius:16,fontWeight:800,fontSize:14,textDecoration:"none",boxShadow:"0 6px 24px rgba(99,102,241,.45)"}}>
+                Shop at WS Game Co →
+              </a>
+            </div>
+          )}
+        </div>
+      </>)}
+
+      {/* MODAL */}
+      {active&&<Modal game={active} data={gameData[active.id]||{}} onClose={()=>setActive(null)} onUpdate={patch=>updateGame(active.id,patch)} theme={T}/>}
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
